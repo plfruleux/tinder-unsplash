@@ -1,5 +1,5 @@
 // 1. CONFIGURATION (remplacez par votre clé Unsplash)
-const UNSPLASH_ACCESS_KEY = 'VOTRE_CLE_ICI';
+const UNSPLASH_ACCESS_KEY = 'YQU5KYLxy-672qT2JTX1AJ2tPJmu-vkrgV63hpv26VI';
 
 // 2. ID des collections Unsplash "Nature" et "Espace"
 // Vous pouvez les trouver en explorant https://unsplash.com/collections
