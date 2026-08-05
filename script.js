@@ -1,9 +1,8 @@
 // 1. CONFIGURATION (remplacez par votre clé API Unsplash Access Key)
-const UNSPLASH_ACCESS_KEY = 'YQU5KYLxy-672qT2JTX1AJ2tPJmu-vkrgV63hpv26VI';
+const UNSPLASH_ACCESS_KEY = 'YQU5KYLxy-672qT2JTX1AJ2tPJmu-vkrgV63hpv26VI'; // ⚠️ votre clé actuelle (vous pouvez la laisser)
 
-// 2. ID des collections Unsplash "Nature" et "Espace" (mises à jour)
-const NATURE_COLLECTION_ID = '11649432'; // Nature (par Unsplash)
-const SPACE_COLLECTION_ID  = '571130';   // Space
+// 2. Thèmes à rechercher (plus robuste que des IDs de collection)
+const THEMES = ['nature', 'space'];
 
 // 3. État local
 let currentPhoto = null;
@@ -49,13 +48,15 @@ function saveToLocalStorage() {
   localStorage.setItem('unsplash_liked', JSON.stringify([...likedIds]));
 }
 
-// Récupère les photos des deux collections
+// Récupère les photos des thèmes via l'API Search
 async function fetchPhotos() {
   try {
+    // Lance les deux recherches en parallèle
     const [naturePhotos, spacePhotos] = await Promise.all([
-      fetchCollectionPhotos(NATURE_COLLECTION_ID),
-      fetchCollectionPhotos(SPACE_COLLECTION_ID)
+      fetchSearchPhotos(THEMES[0]), // nature
+      fetchSearchPhotos(THEMES[1])  // space
     ]);
+
     // Combine et élimine les doublons
     const allPhotos = [...naturePhotos, ...spacePhotos];
     const unique = [];
@@ -66,8 +67,10 @@ async function fetchPhotos() {
         unique.push(photo);
       }
     }
-    // On ne garde que les photos non refusées ET non aimées (pour éviter de reproposer un like)
+
+    // On ne garde que les photos non refusées ET non aimées
     photosPool = unique.filter(p => !dislikedIds.has(p.id) && !likedIds.has(p.id));
+
     if (photosPool.length === 0) {
       statusEl.textContent = "Toutes les photos ont été vues ! Réinitialisez les préférences.";
     } else {
@@ -75,13 +78,13 @@ async function fetchPhotos() {
     }
   } catch (error) {
     console.error('Erreur lors du chargement des photos :', error);
-    statusEl.textContent = "Impossible de charger les photos. Vérifiez la console (F12) pour plus de détails.";
+    statusEl.textContent = "Impossible de charger les photos. Vérifiez la console (F12).";
   }
 }
 
-// Récupère les photos d'une collection (max 30, triées par popularité)
-async function fetchCollectionPhotos(collectionId) {
-  const url = `https://api.unsplash.com/collections/${collectionId}/photos?per_page=30&order_by=popular`;
+// Recherche les photos d'un thème donné (max 30, tri par pertinence/popularité)
+async function fetchSearchPhotos(query) {
+  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=30&order_by=relevant`;
   const response = await fetch(url, {
     headers: {
       'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
@@ -89,10 +92,11 @@ async function fetchCollectionPhotos(collectionId) {
   });
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Collection ${collectionId}: ${response.status} - ${errorText}`);
+    throw new Error(`Recherche "${query}": ${response.status} - ${errorText}`);
   }
   const data = await response.json();
-  return data.map(photo => ({
+  // data.results contient le tableau des photos
+  return data.results.map(photo => ({
     id: photo.id,
     url: photo.urls.regular,
     description: photo.description || photo.alt_description || 'Sans titre',
@@ -134,7 +138,6 @@ function swipeCard(action) {
 function attachEvents() {
   likeBtn.addEventListener('click', () => {
     if (!currentPhoto) return;
-    // Ajoute l'ID aux aimés
     likedIds.add(currentPhoto.id);
     saveToLocalStorage();
     swipeCard('like');
@@ -142,7 +145,6 @@ function attachEvents() {
 
   dislikeBtn.addEventListener('click', () => {
     if (!currentPhoto) return;
-    // Ajoute l'ID aux refusés
     dislikedIds.add(currentPhoto.id);
     saveToLocalStorage();
     swipeCard('dislike');
@@ -161,7 +163,7 @@ function attachEvents() {
     statusEl.textContent = `Exporté : ${likedArray.length} photos aimées.`;
   });
 
-  // Optionnel : réinitialisation (appuyer longtemps sur le bouton export)
+  // Réinitialisation (appui long)
   let resetTimer;
   exportBtn.addEventListener('mousedown', () => {
     resetTimer = setTimeout(() => {
