@@ -1,11 +1,9 @@
-// 1. CONFIGURATION (remplacez par votre clé Unsplash)
+// 1. CONFIGURATION (remplacez par votre clé API Unsplash Access Key)
 const UNSPLASH_ACCESS_KEY = 'YQU5KYLxy-672qT2JTX1AJ2tPJmu-vkrgV63hpv26VI';
 
-// 2. ID des collections Unsplash "Nature" et "Espace"
-// Vous pouvez les trouver en explorant https://unsplash.com/collections
-// Voici deux exemples populaires :
-const NATURE_COLLECTION_ID = '3330453'; // Nature (officielle)
-const SPACE_COLLECTION_ID  = '557577';  // Space
+// 2. ID des collections Unsplash "Nature" et "Espace" (mises à jour)
+const NATURE_COLLECTION_ID = '11649432'; // Nature (par Unsplash)
+const SPACE_COLLECTION_ID  = '571130';   // Space
 
 // 3. État local
 let currentPhoto = null;
@@ -72,10 +70,12 @@ async function fetchPhotos() {
     photosPool = unique.filter(p => !dislikedIds.has(p.id) && !likedIds.has(p.id));
     if (photosPool.length === 0) {
       statusEl.textContent = "Toutes les photos ont été vues ! Réinitialisez les préférences.";
+    } else {
+      statusEl.textContent = `${photosPool.length} photos chargées.`;
     }
   } catch (error) {
     console.error('Erreur lors du chargement des photos :', error);
-    statusEl.textContent = "Impossible de charger les photos. Vérifiez votre clé API et votre connexion.";
+    statusEl.textContent = "Impossible de charger les photos. Vérifiez la console (F12) pour plus de détails.";
   }
 }
 
@@ -88,7 +88,8 @@ async function fetchCollectionPhotos(collectionId) {
     }
   });
   if (!response.ok) {
-    throw new Error(`Collection ${collectionId} non trouvée`);
+    const errorText = await response.text();
+    throw new Error(`Collection ${collectionId}: ${response.status} - ${errorText}`);
   }
   const data = await response.json();
   return data.map(photo => ({
