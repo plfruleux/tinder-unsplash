@@ -1,1 +1,95 @@
-style.css
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #1a1a1a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+.tinder-container {
+  text-align: center;
+}
+.card {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  width: 350px;
+  max-width: 90vw;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  margin-bottom: 20px;
+  transition: transform 0.3s, opacity 0.3s;
+}
+.card.disliked {
+  transform: translateX(-150%) rotate(-20deg);
+  opacity: 0;
+}
+.card.liked {
+  transform: translateX(150%) rotate(20deg);
+  opacity: 0;
+}
+.card-image {
+  width: 100%;
+  height: 400px;
+  background-size: cover;
+  background-position: center;
+}
+.card-info {
+  padding: 15px;
+}
+.card-info h2 {
+  font-size: 1.2em;
+  margin-bottom: 5px;
+}
+.card-info p {
+  color: #666;
+  font-style: italic;
+}
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 10px 0 30px;
+}
+.btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  font-size: 30px;
+  cursor: pointer;
+  color: white;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  transition: transform 0.1s;
+}
+.btn:active {
+  transform: scale(0.9);
+}
+.dislike {
+  background: #e74c3c;
+}
+.like {
+  background: #2ecc71;
+}
+.export-section {
+  color: white;
+}
+#export-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 30px;
+  font-size: 1em;
+  cursor: pointer;
+}
+#status {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #aaa;
+}
