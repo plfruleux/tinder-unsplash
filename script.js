@@ -1,14 +1,23 @@
-// 1. CONFIGURATION (remplacez par votre clé API Unsplash Access Key)
-const UNSPLASH_ACCESS_KEY = 'YQU5KYLxy-672qT2JTX1AJ2tPJmu-vkrgV63hpv26VI'; // ⚠️ votre clé actuelle (vous pouvez la laisser)
+// 1. CONFIGURATION
+const UNSPLASH_ACCESS_KEY = 'YQU5KYLxy-672qT2JTX1AJ2tPJmu-vkrgV63hpv26VI'; // Votre clé
 
-// 2. Thèmes à rechercher (plus robuste que des IDs de collection)
-const THEMES = ['nature', 'space'];
+// 2. Thèmes paysagers (pool large, sans espace)
+const THEMES = [
+  'landscape',
+  'nature',
+  'mountain',
+  'forest',
+  'ocean',
+  'sunset',
+  'lake',
+  'waterfall'
+];
 
 // 3. État local
 let currentPhoto = null;
-let photosPool = [];          // Toutes les photos chargées et non refusées
-let dislikedIds = new Set();  // IDs déjà refusés (stockés dans localStorage)
-let likedIds = new Set();     // IDs aimés (stockés dans localStorage)
+let photosPool = [];
+let dislikedIds = new Set();
+let likedIds = new Set();
 
 // Sélecteurs DOM
 const cardEl = document.getElementById('card');
@@ -30,7 +39,6 @@ async function init() {
   attachEvents();
 }
 
-// Charge les préférences depuis le localStorage
 function loadFromLocalStorage() {
   const savedDisliked = localStorage.getItem('unsplash_disliked');
   if (savedDisliked) {
@@ -42,23 +50,23 @@ function loadFromLocalStorage() {
   }
 }
 
-// Sauvegarde les ensembles dans le localStorage
 function saveToLocalStorage() {
   localStorage.setItem('unsplash_disliked', JSON.stringify([...dislikedIds]));
   localStorage.setItem('unsplash_liked', JSON.stringify([...likedIds]));
 }
 
-// Récupère les photos des thèmes via l'API Search
+// Charge les photos de TOUS les thèmes en parallèle
 async function fetchPhotos() {
   try {
-    // Lance les deux recherches en parallèle
-    const [naturePhotos, spacePhotos] = await Promise.all([
-      fetchSearchPhotos(THEMES[0]), // nature
-      fetchSearchPhotos(THEMES[1])  // space
-    ]);
+    // Lance une recherche pour chaque thème (30 photos par thème, ordre de pertinence)
+    const allResults = await Promise.all(
+      THEMES.map(theme => fetchSearchPhotos(theme))
+    );
 
-    // Combine et élimine les doublons
-    const allPhotos = [...naturePhotos, ...spacePhotos];
+    // Combine tous les résultats (aplanit le tableau de tableaux)
+    const allPhotos = allResults.flat();
+
+    // Supprime les doublons
     const unique = [];
     const seen = new Set();
     for (const photo of allPhotos) {
@@ -68,21 +76,21 @@ async function fetchPhotos() {
       }
     }
 
-    // On ne garde que les photos non refusées ET non aimées
+    // Filtre les photos déjà refusées ou aimées
     photosPool = unique.filter(p => !dislikedIds.has(p.id) && !likedIds.has(p.id));
 
     if (photosPool.length === 0) {
       statusEl.textContent = "Toutes les photos ont été vues ! Réinitialisez les préférences.";
     } else {
-      statusEl.textContent = `${photosPool.length} photos chargées.`;
+      statusEl.textContent = `${photosPool.length} photos chargées (paysages uniquement).`;
     }
   } catch (error) {
     console.error('Erreur lors du chargement des photos :', error);
-    statusEl.textContent = "Impossible de charger les photos. Vérifiez la console (F12).";
+    statusEl.textContent = "Erreur de chargement. Vérifiez la console (F12).";
   }
 }
 
-// Recherche les photos d'un thème donné (max 30, tri par pertinence/popularité)
+// Recherche pour un thème donné
 async function fetchSearchPhotos(query) {
   const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=30&order_by=relevant`;
   const response = await fetch(url, {
@@ -95,17 +103,15 @@ async function fetchSearchPhotos(query) {
     throw new Error(`Recherche "${query}": ${response.status} - ${errorText}`);
   }
   const data = await response.json();
-  // data.results contient le tableau des photos
   return data.results.map(photo => ({
     id: photo.id,
     url: photo.urls.regular,
     description: photo.description || photo.alt_description || 'Sans titre',
-    author: photo.user.name,
-    download: photo.links.download_location
+    author: photo.user.name
   }));
 }
 
-// Affiche une photo aléatoire parmi le pool
+// Affiche une photo aléatoire
 function showRandomPhoto() {
   if (photosPool.length === 0) {
     cardImageEl.style.backgroundImage = 'none';
@@ -118,23 +124,21 @@ function showRandomPhoto() {
   cardImageEl.style.backgroundImage = `url(${currentPhoto.url})`;
   cardTitleEl.textContent = currentPhoto.description;
   cardAuthorEl.textContent = `par ${currentPhoto.author}`;
-  // Retire la photo du pool pour ne pas la reproposer dans la session
   photosPool.splice(randomIndex, 1);
 }
 
-// Anime la carte et prépare la suivante
+// Animation swipe
 function swipeCard(action) {
   if (!currentPhoto) return;
   const card = cardEl;
   card.classList.add(action === 'like' ? 'liked' : 'disliked');
-  // Après l'animation, afficher la suivante
   setTimeout(() => {
     card.classList.remove('liked', 'disliked');
     showRandomPhoto();
   }, 300);
 }
 
-// Gestion des événements
+// Événements
 function attachEvents() {
   likeBtn.addEventListener('click', () => {
     if (!currentPhoto) return;
@@ -163,7 +167,7 @@ function attachEvents() {
     statusEl.textContent = `Exporté : ${likedArray.length} photos aimées.`;
   });
 
-  // Réinitialisation (appui long)
+  // Réinitialisation par appui long
   let resetTimer;
   exportBtn.addEventListener('mousedown', () => {
     resetTimer = setTimeout(() => {
